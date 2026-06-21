@@ -9,4 +9,4 @@ public class StockLevel
     public int Quantity { get; set; }
     public int ReorderThreshold { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
-}       
+}

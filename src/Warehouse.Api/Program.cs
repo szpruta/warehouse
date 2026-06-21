@@ -6,7 +6,7 @@ using Warehouse.Api.Features.Products;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<WarehouseDbContext>(options => 
+builder.Services.AddDbContext<WarehouseDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Warehouse"))
 );
 

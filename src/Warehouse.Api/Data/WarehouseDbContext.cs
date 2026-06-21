@@ -23,8 +23,7 @@ public class WarehouseDbContext(DbContextOptions<WarehouseDbContext> options) : 
         });
 
         modelBuilder.Entity<StockLevel>(stockLevel =>
-        {
-            stockLevel.Property(s => s.Quantity).IsRequired();
-        });
+            stockLevel.Property(s => s.Quantity).IsRequired()
+        );
     }
 }
