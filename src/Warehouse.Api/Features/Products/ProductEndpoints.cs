@@ -54,6 +54,7 @@ public static class ProductEndpoints
         var now = DateTime.UtcNow;
         var product = new Product
         {
+            Id = Guid.NewGuid().GetHashCode(),
             Sku = request.Sku,
             Name = request.Name,
             Description = request.Description,
@@ -106,8 +107,8 @@ public static class ProductEndpoints
 
     private static ProductResponse MapToResponse(Product p) => new(
         p.Id, p.Sku, p.Name, p.Description,
-        p.StockLevel?.Quantity ?? 0,
-        p.StockLevel?.ReorderThreshold ?? 0,
+        p.StockLevel?.Quantity is null ? 0 : p.StockLevel.Quantity,
+        p.StockLevel?.ReorderThreshold is null ? 0 : p.StockLevel.ReorderThreshold,
         p.StockLevel != null && p.StockLevel.Quantity <= p.StockLevel.ReorderThreshold
     );
 }
