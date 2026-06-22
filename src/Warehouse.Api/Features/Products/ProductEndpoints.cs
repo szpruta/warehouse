@@ -14,6 +14,8 @@ public static class ProductEndpoints
         group.MapGet("/{id:int}", GetById);
         group.MapGet("/{sku}", GetBySku);
         group.MapPost("/", Create);
+        group.MapPut("/{id:int}", Update);
+        group.MapDelete("/{id:int}", Delete);
 
         return app;
     }
@@ -79,6 +81,37 @@ public static class ProductEndpoints
         await db.SaveChangesAsync(ct);
 
         return TypedResults.Created($"/api/products/{product.Id}", MapToResponse(product));
+    }
+
+    private static async Task<IResult> Update(int id, UpdateProductRequest request, WarehouseDbContext db, CancellationToken ct)
+    {
+        var product = await db.Products
+            .Include(p => p.StockLevel)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+
+        if (product is null)
+            return TypedResults.NotFound();
+
+        product.Name = request.Name;
+
+        product.Description = request.Description ?? product.Description;
+        product.UpdatedAt = DateTimeOffset.UtcNow;
+        product.StockLevel?.ReorderThreshold = request.ReorderThreshold;
+
+        await db.SaveChangesAsync(ct);
+        return TypedResults.Ok(MapToResponse(product));
+    }
+
+    private static async Task<IResult> Delete(int id, WarehouseDbContext db, CancellationToken ct)
+    {
+        var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
+
+        if (product is null)
+            return TypedResults.NotFound();
+
+        db.Products.Remove(product);
+        await db.SaveChangesAsync(ct);
+        return TypedResults.Ok($"Product of ID {id} has been deleted");
     }
 
     private static ProductResponse MapToResponse(Product p) => new(
