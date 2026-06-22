@@ -12,7 +12,7 @@ public class WarehouseDbContext(DbContextOptions<WarehouseDbContext> options) : 
     {
         modelBuilder.Entity<Product>(product =>
         {
-            product.Property(p => p.SKU).HasMaxLength(64).IsRequired();
+            product.Property(p => p.Sku).HasMaxLength(64).IsRequired();
             product.Property(p => p.Name).HasMaxLength(256).IsRequired();
             product.Property(p => p.Description).HasMaxLength(256).IsRequired();
 
