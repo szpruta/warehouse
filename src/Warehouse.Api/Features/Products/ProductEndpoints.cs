@@ -12,7 +12,6 @@ public static class ProductEndpoints
 
         group.MapGet("/", GetAll);
         group.MapGet("/{id:int}", GetById);
-        group.MapGet("/{sku}", GetBySku);
         group.MapPost("/", Create);
         group.MapPut("/{id:int}", Update);
         group.MapDelete("/{id:int}", Delete);
@@ -30,15 +29,6 @@ public static class ProductEndpoints
 
         return product is null
             ? TypedResults.NotFound()
-            : TypedResults.Ok(product);
-    }
-
-    private static async Task<IResult> GetBySku(string sku, WarehouseDbContext db, CancellationToken ct)
-    {
-        var product = await db.Products.FirstAsync(p => p.Sku == sku, ct);
-
-        return product is null
-            ? TypedResults.NotFound($"Product with SKU {sku} NOT FOUND.")
             : TypedResults.Ok(product);
     }
 
