@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Api.Data;
 using Warehouse.Api.Domain;
@@ -6,6 +7,16 @@ namespace Warehouse.Api.Features.Products;
 
 public static class ProductEndpoints
 {
+    private readonly static Expression<Func<Product, ProductResponse>> Projection =
+        p => new ProductResponse(
+            p.Id, p.Sku, p.Name, p.Description,
+            p.StockLevel != null ? p.StockLevel.Quantity : 0,
+            p.StockLevel != null ? p.StockLevel.ReorderThreshold : 0,
+            p.StockLevel != null && p.StockLevel.Quantity <= p.StockLevel.ReorderThreshold);
+
+    // Compiled once — for mapping entities already loaded in memory (Create/Update).
+    private readonly static Func<Product, ProductResponse> MapToResponse = Projection.Compile();
+
     public static IEndpointRouteBuilder MapProductEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/products").WithTags("Products");
@@ -24,7 +35,7 @@ public static class ProductEndpoints
         var product = await db.Products
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => MapToResponse(p))
+            .Select(Projection)
             .FirstOrDefaultAsync(ct);
 
         return product is null
@@ -37,12 +48,10 @@ public static class ProductEndpoints
         var products = await db.Products
             .AsNoTracking()
             .OrderBy(p => p.Sku)
-            .Select(p => MapToResponse(p))
+            .Select(Projection)
             .ToListAsync(ct);
 
-        return products is null
-            ? TypedResults.NotFound()
-            : TypedResults.Ok(products);
+        return TypedResults.Ok(products);
     }
 
     private static async Task<IResult> Create(CreateProductRequest request, WarehouseDbContext db, CancellationToken ct)
@@ -51,7 +60,7 @@ public static class ProductEndpoints
         if (exists)
             return TypedResults.Conflict($"A product with SKU '{request.Sku}' already exists");
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var product = new Product
         {
             Id = Guid.NewGuid().GetHashCode(),
@@ -68,7 +77,7 @@ public static class ProductEndpoints
             }
         };
 
-        await db.Products.AddAsync(product, ct);
+        db.Products.Add(product);
         await db.SaveChangesAsync(ct);
 
         return TypedResults.Created($"/api/products/{product.Id}", MapToResponse(product));
@@ -84,7 +93,6 @@ public static class ProductEndpoints
             return TypedResults.NotFound();
 
         product.Name = request.Name;
-
         product.Description = request.Description ?? product.Description;
         product.UpdatedAt = DateTimeOffset.UtcNow;
         product.StockLevel?.ReorderThreshold = request.ReorderThreshold;
@@ -104,11 +112,4 @@ public static class ProductEndpoints
         await db.SaveChangesAsync(ct);
         return TypedResults.Ok($"Product of ID {id} has been deleted");
     }
-
-    private static ProductResponse MapToResponse(Product p) => new(
-        p.Id, p.Sku, p.Name, p.Description,
-        p.StockLevel?.Quantity is null ? 0 : p.StockLevel.Quantity,
-        p.StockLevel?.ReorderThreshold is null ? 0 : p.StockLevel.ReorderThreshold,
-        p.StockLevel != null && p.StockLevel.Quantity <= p.StockLevel.ReorderThreshold
-    );
 }
